@@ -354,6 +354,9 @@ fn extract_config_path(args: &[String]) -> Option<Option<String>> {
     ];
     let mut i = 0;
     while i < args.len() {
+        if args[i] == "--" {
+            break;
+        }
         if args[i] == "--config" {
             return Some(args.get(i + 1).cloned());
         }
@@ -730,6 +733,10 @@ pub fn parse_flags(args: &[String]) -> Flags {
     let mut seen_command = false;
     while i < args.len() {
         let arg = args[i].as_str();
+        // `--` ends option parsing; what follows is literal command data
+        if arg == "--" {
+            break;
+        }
         if !arg.starts_with('-') && looks_like_command(arg) {
             seen_command = true;
         }
@@ -1267,6 +1274,11 @@ pub fn clean_args(args: &[String]) -> Vec<String> {
             i += 1;
             continue;
         }
+        // keep `--` so the command parser knows where the literal data starts
+        if arg == "--" {
+            result.extend_from_slice(&args[i..]);
+            break;
+        }
         if arg.starts_with("--restore=") {
             i += 1;
             continue;
@@ -1427,6 +1439,15 @@ mod tests {
     fn test_parse_no_headers_flag() {
         let flags = parse_flags(&args("open example.com"));
         assert!(flags.headers.is_none());
+    }
+
+    #[test]
+    fn test_end_of_options_keeps_flag_shaped_text() {
+        let input = args("fill #field -- --json --session x");
+        assert_eq!(clean_args(&input), input);
+        let flags = parse_flags(&input);
+        assert!(!flags.json);
+        assert_eq!(flags.session, parse_flags(&args("fill #field")).session);
     }
 
     #[test]
