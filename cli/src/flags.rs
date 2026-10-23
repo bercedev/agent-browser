@@ -1192,6 +1192,11 @@ fn looks_like_command(value: &str) -> bool {
     crate::commands::is_top_level_command(value)
 }
 
+/// The args before a `--`; everything after it is literal command data.
+pub fn before_end_of_options(args: &[String]) -> &[String] {
+    &args[..args.iter().position(|a| a == "--").unwrap_or(args.len())]
+}
+
 pub fn clean_args(args: &[String]) -> Vec<String> {
     let mut result = Vec::new();
     let mut skip_next = false;
@@ -1445,6 +1450,7 @@ mod tests {
     fn test_end_of_options_keeps_flag_shaped_text() {
         let input = args("fill #field -- --json --session x");
         assert_eq!(clean_args(&input), input);
+        assert_eq!(before_end_of_options(&input), &input[..2]);
         let flags = parse_flags(&input);
         assert!(!flags.json);
         assert_eq!(flags.session, parse_flags(&args("fill #field")).session);
